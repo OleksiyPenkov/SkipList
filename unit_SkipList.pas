@@ -8,7 +8,7 @@ SysUtils, Math;
 
 const
   MaxLevel = 16;    // ~lg(MaxInt)
-  p = 0.25;
+  p = 0.25;         // 1/4
 
 type
 
@@ -22,10 +22,10 @@ type
 
   TSkipList = class
   private
-    Header, Tail: PNode;
-    Level : Byte;
+    FHead, FTail: PNode;
+    FLevel : Byte;
 
-    Current: PNode;
+    FCurrent: PNode;
 
     function MakeNode(lvl, Value: Integer):PNode;
     function RandomLevel: Integer;
@@ -33,9 +33,9 @@ type
     function GetEOF: Boolean;
   published
     constructor Create;
-    destructor  Free;
+    destructor  Destroy; override;
 
-    procedure Insert(AKey: Integer; NewValue: string);
+    procedure Insert(AKey: Integer;const NewValue: string);
     function  Search(Akey: Integer):string;
     procedure Delete(AKey : Integer);
     procedure First;
@@ -51,27 +51,27 @@ implementation
 
 constructor TSkipList.Create;
 begin
-  Header := MakeNode(1, -MaxInt);
-
-  Tail := MakeNode(1, MaxInt);
-  Header.Next[0] := Tail;
-  Level  := 1;
+  inherited;
+  FHead := MakeNode(1, -MaxInt);
+  FTail := MakeNode(1, MaxInt);
+  FHead.Next[0] := FTail;
+  FLevel  := 1;
 
   {$IFDEF DEBUG}
-    Header.Data := 'BEGIN';
-    Tail.Data := 'END';
+    FHead.Data := 'BEGIN';
+    FTail.Data := 'END';
   {$ENDIF}
 end;
 
 procedure TSkipList.Delete(AKey: Integer);
 var
-  i, lvl: Integer;
+  i: Integer;
   x: PNode;
   Left: array of PNode;
 begin
-  SetLength(Left, Level);
-  x := Header;
-  for I := Level - 1 downto 0 do
+  SetLength(Left, FLevel);
+  x := FHead;
+  for I := FLevel - 1 downto 0 do
   begin
     while (High(x.Next) >= i) and (x.Next[i].key < AKey) do
       x := x.Next[i];
@@ -81,7 +81,7 @@ begin
   x := x.Next[0];
   if x.Key = AKey then
   begin
-    for I := 0 to Level - 1 do
+    for I := 0 to FLevel - 1 do
     begin
       if Left[i].Next[i] <> x then Break;
       Left[i].next[i] := x.Next[i];
@@ -89,8 +89,8 @@ begin
 
     DeleteNode(x);
 
-    while (Level > 1) and (Header.Next[Level - 1] = Nil) do
-      Dec(Level);
+    while (FLevel > 1) and (FHead.Next[FLevel - 1] = Nil) do
+      Dec(FLevel);
   end;
 end;
 
@@ -102,38 +102,40 @@ end;
 
 procedure TSkipList.First;
 begin
-  Current := Header.Next[0];
+  FCurrent := FHead.Next[0];
 end;
 
-destructor TSkipList.Free;
+destructor TSkipList.Destroy;
 var
   x: PNode;
 begin
   First;
-  while not EOF do
+  while not GetEof do
   begin
-    x := Current;
+    x := FCurrent;
     Next;
     DeleteNode(x);
   end;
-  DeleteNode(Current);
-  DeleteNode(Header);
+  DeleteNode(FCurrent);
+  DeleteNode(FHead);
+
+  inherited Destroy;
 end;
 
 function TSkipList.GetEOF: Boolean;
 begin
-  Result := Current.Key = MaxInt;
+  Result := FCurrent.Key = MaxInt;
 end;
 
-procedure TSkipList.Insert(AKey: Integer; NewValue: string);
+procedure TSkipList.Insert(AKey: Integer;const NewValue: string);
 var
   i, lvl: Integer;
   x: PNode;
   Left: array of PNode;
 begin
-  SetLength(Left, Level);
-  x := Header;
-  for I := Level - 1 downto 0 do
+  SetLength(Left, FLevel);
+  x := FHead;
+  for I := FLevel - 1 downto 0 do
   begin
     while (High(x.Next) >= i) and (x.Next[i].key < AKey) do
       x := x.Next[i];
@@ -149,16 +151,16 @@ begin
     x := MakeNode(lvl, AKey);
     x.Data := NewValue;
 
-    if lvl > level then
+    if lvl > FLevel then
     begin
-      SetLength(Header.Next, lvl);
+      SetLength(FHead.Next, lvl);
       SetLength(Left, lvl);
-      for I := Level + 1 to lvl do
+      for I := FLevel + 1 to lvl do
       begin
-        Header.Next[i - 1] := Tail;
-        Left[i - 1] := Header;
+        FHead.Next[i - 1] := FTail;
+        Left[i - 1] := FHead;
       end;
-      Level := lvl;
+      FLevel := lvl;
     end;
 
     for I := 0 to High(x.Next) do
@@ -166,7 +168,6 @@ begin
       x.Next[i] := Left[i].Next[i];
       Left[i].next[i] := x;
     end;
-
   end;
 end;
 
@@ -183,7 +184,7 @@ end;
 
 procedure TSkipList.Next;
 begin
-  Current := Current.Next[0];
+  FCurrent := FCurrent.Next[0];
 end;
 
 function TSkipList.RandomLevel: Integer;
@@ -198,25 +199,25 @@ var
   i: Integer;
   x: PNode;
 begin
-  x := Header;
-  for I := Level - 1 downto 0 do
+  x := FHead;
+  for I := FLevel - 1 downto 0 do
   begin
     while x.Next[i].key < AKey do
       x := x.Next[i];
   end;
   x := x.Next[0];
   if x.Key = AKey then
-    Current := x
+    FCurrent := x
   else
-    Current := nil;
+    FCurrent := nil;
 
   Result := x.Data;
 end;
 
 function TSkipList.Value: string;
 begin
-  if Current <> nil then
-    Result := Current.Data
+  if FCurrent <> nil then
+    Result := FCurrent.Data
   else
     Result := 'NIL';
 end;
