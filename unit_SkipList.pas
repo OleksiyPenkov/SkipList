@@ -201,10 +201,8 @@ var
 begin
   x := FHead;
   for I := FLevel - 1 downto 0 do
-  begin
-    while x.Next[i].key < AKey do
+    while (High(x.Next) >= i) and (x.Next[i].key < AKey) do
       x := x.Next[i];
-  end;
   x := x.Next[0];
   if x.Key = AKey then
     FCurrent := x
