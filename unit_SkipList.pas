@@ -8,7 +8,7 @@ SysUtils, Math;
 
 const
   MaxLevel = 16;    // ~lg(MaxInt)
-  p = 0.25;         // 1/4
+  p = 0.5;         // 1/4
 
 type
 
@@ -89,8 +89,9 @@ begin
 
     DeleteNode(x);
 
-    while (FLevel > 1) and (FHead.Next[FLevel - 1] = Nil) do
+    while (FLevel > 1) and (FHead.Next[FLevel - 1] = FTail) do
       Dec(FLevel);
+    SetLength(FHead.Next, FLevel);
   end;
 end;
 
